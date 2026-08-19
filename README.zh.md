@@ -1,153 +1,61 @@
-# dsh-change-review
+# dsh-diff-review
 
-DeepSeek Harness（DSH）**会话修改审查**插件：自动追踪会话内的文件写入/编辑操作，在会话视图中以 diff 对比形式展示，支持颜色自定义、实时推送、会话隔离与子代理聚合。
+DeepSeek Harness（DSH）**会话修改审查**插件：自动追踪会话内的文件写入/编辑操作，集成 diff2html 实现 VS Code 风格 side-by-side diff 对比，主题自动跟随系统。
 
-> 一个包同时承载 Host 逻辑与浏览器 UI（`dsh.bundle` + `dsh.client` 双 manifest）。
+> 基于 [dsh-change-review](https://github.com/cirelir/dsh-change-review) 修改，集成 diff2html。
 
 [English](README.md)
 
 ## ✨ 功能
 
 | 功能 | 说明 |
-| --- | --- |
-| 自动追踪 | 监听 `write` / `edit` 工具调用，记录修改前后内容与时间 |
-| diff 对比 | LCS 行级 diff：新增（绿）/ 删除（红）/ 上下文（灰），含新旧行号 |
-| 会话隔离 | 每个会话只展示自己的修改，切换会话即切换审查内容 |
-| 子代理聚合 | 子代理（subagent）的修改自动聚合到根父会话 |
-| 实时推送 | SSE 服务端推送，修改文件后角标/列表即时刷新（零轮询） |
-| 撤回变更 | 可**单独撤回某一项修改**（保留其后无冲突的修改），或**撤回整个文件的全部修改**（恢复到本次会话首次修改前；会话中新建的文件则删除）——直接改写磁盘文件 |
-| 轮次内审查 | 每轮对话尾部展示**本轮**变更的文件列表与可展开的 diff（支持单项撤回），与「审查」标签的**会话累计**视图相互区分 |
-| 数量角标 | 「审查」标签显示待审文件数，背景/文字颜色可自定义 |
-| 颜色自定义 | 12 项颜色在 **设置 → 修改审查** 页调整（含对话底部变更列表的背景色、边框色、新增/删除行数颜色），**每个颜色项都带透明度滑块**（支持 rgba），localStorage 持久化 |
-| 侧边栏净化 | 隐藏左侧栏的 Cordis 插件运行提示（cordis-panel） |
-
-## 📸 截图
-
-| 「审查」标签页 — 文件列表 + diff 预览 | 轮次内审查卡片 |
-|:---:|:---:|
-| ![审查标签页](assets/screenshots/review-tab.png) | ![轮次内审查](assets/screenshots/per-turn-card.png) |
-
-| 展开的 diff 与单项撤回 | 颜色自定义：设置 → 修改审查 |
-|:---:|:---:|
-| ![diff 详情](assets/screenshots/diff-detail.png) | ![颜色设置](assets/screenshots/color-settings.png) |
-
-| 插件市场安装 |
-|:---:|
-| ![插件市场](assets/screenshots/plugin-market.png) |
+|------|------|
+| 自动追踪 | 监听 write/edit 工具调用，记录修改前后内容与时间 |
+| Side-by-Side Diff | 集成 diff2html，VS Code 风格的并排对比视图 |
+| 主题自动跟随 | 自动适配系统深色/浅色主题，无需手动配置 |
+| 语法高亮 | 支持代码语法高亮显示 |
+| 会话隔离 | 每个会话只展示自己的修改 |
+| 子代理聚合 | 子代理的修改自动聚合到根父会话 |
+| 实时推送 | SSE 实时更新修改状态 |
+| 一键撤回 | 支持单个修改或整个文件的撤回 |
+| 编辑器集成 | 支持在 VS Code、Cursor 等编辑器中打开文件 |
 
 ## 📦 安装
 
-### 方式一：`dsh plugin add`（npm 发布后）
-
-```sh
-dsh plugin --profile web add dsh-change-review
+```bash
+# 从 GitHub 安装
+dsh plugin --profile web add github:xwh5/dsh-change-review
 ```
 
-### 方式二：手动部署
-
-1. 将包放入 harness 可解析的 `node_modules`，并在 profile 的 `cordis.patch.yml` 注册：
-
-```yaml
-- insert:
-    - id: diff-review
-      name: 'dsh-change-review'
-    - id: ui-diff-review
-      name: 'dsh-change-review'
-```
-
-2. 重启 dsh web
-
-> 本插件面向 Web profile（`dsh --profile web`）。
+安装后刷新网页即可使用。
 
 ## 🚀 使用
 
-1. 打开会话，点击会话顶部视图标签 **「审查」**（位于「对话」之后、「轨迹」之前）
-2. 左侧文件列表（写入/编辑次数、~新增/~删除统计），右侧选中文件的 diff 对比。左右两栏**独立滚动**（滚动文件列表不会带动 diff 预览，反之亦然），浏览文件时预览位置保持不动。顶部可切换审查范围：**「此会话」**（会话累计）或 **「最新一轮」**（最近一轮对话的修改）
-3. 文件被修改时角标**实时 +1**；顶部「↻」刷新、「清空」清除当前会话记录
-4. **撤回修改**（每次操作会二次确认，确认后直接改写磁盘文件）：
-   - **撤回某一项**：每条修改（编辑/写入）标题栏右侧的 **撤回此项** 按钮，文件恢复到该项修改之前的内容，其后无冲突的修改保留（有重叠则提示无法单独撤回）
-   - **撤回整个文件**：详情区顶部的 **撤回全部修改** 按钮，恢复到本次会话首次修改之前的状态；会话中新建的文件则直接删除
-5. **轮次内审查**：每轮对话结束后，对话尾部显示 **「本轮变更审查」** 卡片，列出**本轮**修改过的文件；点击文件展开查看该轮修改的 diff，并可对其中某一项修改撤回。会话**累计**变更仍在「审查」标签查看，二者相互独立
-6. 颜色：**设置 → 修改审查**（8 项 + 深浅色预设 + 恢复默认），改动自动保存，刷新保留
+1. 打开 DSH Web 界面
+2. AI 执行 write/edit 工具修改文件后
+3. 点击对话上方的「审查」标签查看修改
+4. 支持「此会话」和「最新一轮」两种视图
 
-## 🎨 颜色配置
-
-| 配置项 | 键名 | 浅色默认 | 深色预设 |
-| --- | --- | --- | --- |
-| 新增行背景 | `addBg` | `#e6ffec` | `#10251c` |
-| 新增行文字 | `addFg` | `#1a7f37` | `#7ee787` |
-| 删除行背景 | `delBg` | `#ffebe9` | `#2d1415` |
-| 删除行文字 | `delFg` | `#cf222e` | `#ffa198` |
-| 上下文背景 | `ctxBg` | `#f6f8fa` | `#161b22` |
-| 行号 / 标记 | `gutter` | `#57606a` | `#8b949e` |
-| 角标背景 | `badgeBg` | `#0969da` | `#4493f8` |
-| 角标文字 | `badgeFg` | `#ffffff` | `#0d1117` |
-| 新增行数（对话底部） | `turnAdd` | `#1a7f37` | `#7ee787` |
-| 删除行数（对话底部） | `turnDel` | `#cf222e` | `#ffa198` |
-| 背景色（对话底部） | `turnBg` | `rgba(255,183,77,.1)`（淡橙 10%） | `rgba(255,183,77,.1)`（淡橙 10%） |
-| 边框色（对话底部） | `turnBorder` | `#ffb74d`（淡橙） | `#ffb74d`（淡橙） |
-
-## 🧠 行为说明
-
-- **追踪范围**：本进程内所有会话的 `write`/`edit` 工具调用；按会话隔离，子代理改动沿 owner 链聚合到根父会话
-- **实时性**：Host 记录后经 SSE（`/diff-review/events`）推送，客户端只处理当前会话事件
-- **持久性**：颜色持久化（localStorage `dsh.diff-review.colors`）；审查记录**持久化到磁盘**（写操作后防抖自动保存，退出时同步落盘，文件位于 `~/.dsh/profiles/web/diff-review-state.json`），重启 dsh web 后自动恢复；删除该文件即清空历史记录
-- **容量保护**：单文件最多 100 次操作；单次内容截断 120KB；diff 单侧最多 1500 行；单独撤回时的三路合并限制单侧最多 2000 行
-- **撤回原理**：记录每项修改的**完整前后内容快照**（来自 write/edit 工具返回值）。撤回最后一项 = 精确还原快照；撤回中间项 = 三路行合并（保留其后修改、撤销该项），重叠即拒绝并提示；撤回成功后该修改及其后的修改从待审列表移除
-- **升级说明**：升级前（未记录内容快照）产生的修改记录无法撤回（不显示撤回按钮）；Host 端改动需**重启 dsh web** 生效，浏览器端改动刷新页面即可
-- **轮次划分**：每项修改记录其所属的**会话轮次**（turn），由 Host 直接扫描**会话日志**（`turn/start`/`turn/end`）得出——不依赖事件监听，重启/恢复的会话也能正确归属，多轮修改会正确分到各轮；子代理在父会话轮次内产生的修改也计入该轮。每轮对话尾部的卡片与该轮次对应；「审查」页的「最新一轮」视图展示最近一个轮次。**升级前**（未记录轮次）的旧记录不会出现在轮次卡片中，但仍可在「审查」标签查看
-
-## 📝 更新日志
-
-### v0.2.4 — 文件树 / 右键菜单 / 异步竞态修复（2026-08-17）
-
-- **修复 UI 错乱** — 异步请求竞态（快速切换会话/文件选择）、会话切换后残留旧状态、SSE 重连未同步等问题已全部修复：请求加入序号令牌防串、会话切换时清空所有旧状态、`es.onopen` 重连后重新同步
-- **文件列表按目录分组** — 审查页左侧文件列表改为目录树结构（文件夹可折叠、显示文件数），长列表浏览更清晰
-- **右键上下文菜单** — 审查页文件列表与轮次变更卡片（文件行 + 产物 chips）均支持右键菜单：「打开文件」（在选定编辑器或预览面板中打开）与「在 Finder 中展示」
-- **编辑器选择器** — 在会话头部（会话日志按钮左侧）新增代码编辑器选择器。自动检测已安装的编辑器（VS Code / Cursor / Windsurf / Zed / Xcode / Android Studio / IntelliJ IDEA / PyCharm / WebStorm / GoLand / PhpStorm / RubyMine / CLion / DataGrip / Sublime Text / BBEdit / TextMate / Nova / CotEditor / Vim / Neovim / Emacs 等），通过 `which` 命令与 `/Applications` 路径识别。按钮文字显示「用xxx打开」并展示编辑器**自带的应用图标**（通过 `/diff-review/editor-icon/:id` 路由从应用 bundle 读取 .icns 并转 PNG 提供）。选中后所有「打开文件」操作均用该编辑器打开；未选择时回退系统默认。选择保存在 localStorage，路由 `/diff-review/open-with-editor` 在主机端派发编辑器命令。检测同时解析 app bundle 内的真实可执行路径（`execPaths`），即使 CLI 未加入 PATH 也能用编辑器自身的二进制打开文件。
-- **新工作区会话监听** — 会话摘要/详情/轮次接口按会话 id 查找时若未命中，自动尝试解析其根会话 id，兼容新建工作区产生的新会话，确保文件修改能被正确监听与汇总。
-- **在 Finder 中展示** — 右键菜单新增「在 Finder 中展示」，直接调用 `open -R`（macOS）/ `explorer`（Windows）/ `xdg-open`（Linux）在文件管理器中高亮文件。
-- **文件列表平铺** — 文件列表从按文件夹分组改回平铺展示，文件名与修改统计同行显示，更紧凑。
-- **布局稳定性** — `.drv-view` 在各会话阶段保持稳定
-
-### v0.2.3 — 左右两栏独立滚动（2026-08-16）
-
-- **独立滚动** — 审查页左侧文件列表与右侧 diff 预览现在各自独立滚动（视图在任何阶段都填满可用高度，并用 `overscroll-behavior: contain` 阻止两栏之间的滚动联动），浏览文件时预览位置保持不动，方便审查
-
-### v0.2.2 — 修复插件注册（2026-08-16）
-
-- **修复插件加载** — 客户端 bundle 改用正确的 `dsh-change-review` id 注册（原为 `@deepseek-ai/dsh-client-ui-diff-review`），并从 `cordis.patch.yml` 移除了重复的 `ui-diff-review` 注入项，插件只会注入一次且能正确加载
-
-### v0.2.0 — 撤回与轮次内审查（2026-08-15）
-
-- **撤回变更** — 可单独撤回某一项修改（三路合并保留其后无冲突的修改，有重叠则拒绝），或撤回整个文件的全部修改（恢复会话首次修改前状态；会话内新建的文件则删除）。确认后直接改写磁盘
-- **轮次内审查** — 每轮对话尾部展示**本轮变更审查**卡片，列出本轮修改的文件与可展开 diff；「审查」页新增「最新一轮」范围切换
-- **持久化** — 审查记录现在可跨 dsh web 重启保留（`~/.dsh/profiles/web/diff-review-state.json`，防抖自动保存 + 退出时同步落盘）
-- **升级说明** — 升级前的记录无内容快照与轮次标记：仍可在「审查」页查看，但无法撤回；升级后请重启 dsh web
-
-### v0.1.0 — 首个版本
-
-- 会话隔离追踪 `write`/`edit` 工具调用，LCS 行级 diff、子代理聚合、SSE 实时推送、颜色自定义、数量角标
-
-## 🗂 架构
+## 📁 文件结构
 
 ```
-Host（lib/index.js）
-  · tools/result 监听 → 按会话分桶记录
-  · LCS 行级 diff
-  · HTTP 路由：/diff-review/summary · /file · /clear · /revert · /turn（均带 ?session=）
-  · SSE：/diff-review/events
-        │  HTTP + SSE（同源）
-Browser UI（lib/client.js，__ModuleLoader__ bundle）
-  · 会话头部探针同步当前会话（隐藏）
-  · 「审查」视图标签 + 角标
-  · 设置页「修改审查」颜色自定义
-  · EventSource 实时订阅
+dsh-diff-review/
+├── lib/
+│   ├── index.js          # 后端：工具执行监听、HTTP 路由
+│   ├── client.js         # 前端：React 组件、diff2html 渲染
+│   └── vendor/
+│       ├── diff2html.min.js
+│       ├── diff2html-ui.min.js
+│       └── diff2html.min.css
+├── cordis.patch.yml
+├── package.json
+└── README.md
 ```
 
-## ⚖️ 免责声明
+## 🙏 致谢
 
-插件代码与你的 harness 进程同权限运行。使用前请审阅源码；收录于社区市场不构成安全背书。
+- 原项目：[dsh-change-review](https://github.com/cirelir/dsh-change-review) by cirelir
+- Diff 库：[diff2html](https://github.com/rtfpessoa/diff2html) by rtfpessoa
 
 ## 📄 License
 
