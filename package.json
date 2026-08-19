@@ -1,0 +1,52 @@
+{
+  "name": "dsh-diff-review",
+  "version": "1.0.0",
+  "description": "DeepSeek Harness 会话修改审查：追踪会话内 write/edit 工具调用，集成 diff2html 实现 VS Code 风格 side-by-side diff 对比，自动跟随系统主题；会话隔离、子代理聚合、SSE 实时推送。",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xwh5/dsh-diff-review.git"
+  },
+  "homepage": "https://github.com/xwh5/dsh-diff-review",
+  "bugs": {
+    "url": "https://github.com/xwh5/dsh-diff-review/issues"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ],
+      "platform": "web"
+    }
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml"
+  ],
+  "keywords": [
+    "deepseek",
+    "harness",
+    "dsh",
+    "dsh-plugin",
+    "diff",
+    "review",
+    "diff2html",
+    "code-review",
+    "side-by-side"
+  ],
+  "author": "xwh5",
+  "license": "MIT"
+}
