@@ -1,4 +1,4 @@
-# dsh-diff-review
+# dsh-change-review
 
 DeepSeek Harness（DSH）**会话修改审查**插件：自动追踪会话内的文件写入/编辑操作，集成 diff2html 实现 VS Code 风格 side-by-side diff 对比，主题自动跟随系统。
 
@@ -36,10 +36,18 @@ dsh plugin --profile web add github:xwh5/dsh-change-review
 3. 点击对话上方的「审查」标签查看修改
 4. 支持「此会话」和「最新一轮」两种视图
 
+## 📸 截图
+
+> 以下为插件在 DSH Web 界面中的实际效果截图。
+
+![DSH 修改审查插件界面截图 1](docs/screenshots/screenshot-1.png)
+
+![DSH 修改审查插件界面截图 2](docs/screenshots/screenshot-2.png)
+
 ## 📁 文件结构
 
 ```
-dsh-diff-review/
+dsh-change-review/
 ├── lib/
 │   ├── index.js          # 后端：工具执行监听、HTTP 路由
 │   ├── client.js         # 前端：React 组件、diff2html 渲染
@@ -47,6 +55,8 @@ dsh-diff-review/
 │       ├── diff2html.min.js
 │       ├── diff2html-ui.min.js
 │       └── diff2html.min.css
+├── docs/
+│   └── screenshots/      # 界面截图（见上方「截图」）
 ├── cordis.patch.yml
 ├── package.json
 └── README.md
